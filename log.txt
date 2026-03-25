@@ -1,0 +1,59 @@
+git : warning: current 
+Git remote contains 
+credentials
+At line:1 char:1
++ git push origin 
+master 2>&1 | 
+Out-String | 
+Set-Content log.txt; 
+cat l ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (warning: curr   
+ en...ins credentia    
+ls:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+warning: current Git 
+remote contains 
+credentials
+Uploading LFS objects: 100% (3/3), 189 MB | 0 B/s, done.
+remote: error: Trace: f
+8121a7cdcea72fd663e124d
+5917738fb623b694d51797e
+c8044b56c27a82353      
+  
+remote: error: See 
+https://gh.io/lfs for 
+more information.      
+  
+remote: error: File 
+similarity.pkl is 
+176.22 MB; this 
+exceeds GitHub's file 
+size limit of 100.00 
+MB        
+remote: error: GH001: 
+Large files detected. 
+You may want to try 
+Git Large File Storage 
+- https://git-lfs.githu
+b.com.        
+To https://github.com/V
+edant-xz/Movie-Recommen
+dation-System.git
+ ! [remote rejected] 
+master -> master 
+(pre-receive hook 
+declined)
+error: failed to push 
+some refs to 'https://g
+ithub.com/Vedant-xz/Mov
+ie-Recommendation-Syste
+m.git'
+

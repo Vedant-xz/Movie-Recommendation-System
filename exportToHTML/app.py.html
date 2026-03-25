@@ -1,0 +1,191 @@
+<html>
+<head>
+<title>app.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+app.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">streamlit </span><span class="s0">as </span><span class="s1">st</span>
+<span class="s0">import </span><span class="s1">pickle</span>
+<span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">import </span><span class="s1">requests</span>
+<span class="s0">import </span><span class="s1">time</span>
+
+<span class="s1">st</span><span class="s2">.</span><span class="s1">set_page_config</span><span class="s2">(</span>
+    <span class="s1">page_title</span><span class="s2">=</span><span class="s3">&quot;Movie Recommender&quot;</span><span class="s2">,</span>
+    <span class="s1">page_icon</span><span class="s2">=</span><span class="s3">&quot;🎬&quot;</span><span class="s2">,</span>
+    <span class="s1">layout</span><span class="s2">=</span><span class="s3">&quot;wide&quot;</span>
+<span class="s2">)</span>
+
+<span class="s4"># ---------- CUSTOM CSS ----------</span>
+<span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;&quot;&quot; 
+&lt;style&gt; 
+.main-title{ 
+    text-align:center; 
+    font-size:60px; 
+    font-weight:700; 
+} 
+ 
+.subtitle{ 
+    text-align:center; 
+    font-size:18px; 
+    color:gray; 
+} 
+ 
+.movie-card{ 
+    padding:10px; 
+    border-radius:12px; 
+    background-color:#111; 
+    text-align:center; 
+    transition: transform 0.3s; 
+} 
+ 
+.movie-card:hover{ 
+    transform: scale(1.05); 
+} 
+ 
+.footer{ 
+    text-align:center; 
+    color:gray; 
+    margin-top:50px; 
+} 
+&lt;/style&gt; 
+&quot;&quot;&quot;</span><span class="s2">, </span><span class="s1">unsafe_allow_html</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+
+<span class="s4"># ---------- LOAD DATA ----------</span>
+<span class="s2">@</span><span class="s1">st</span><span class="s2">.</span><span class="s1">cache_data</span>
+<span class="s0">def </span><span class="s1">load_data</span><span class="s2">():</span>
+    <span class="s1">movies_dict </span><span class="s2">= </span><span class="s1">pickle</span><span class="s2">.</span><span class="s1">load</span><span class="s2">(</span><span class="s1">open</span><span class="s2">(</span><span class="s3">'movie_dict.pkl'</span><span class="s2">, </span><span class="s3">'rb'</span><span class="s2">))</span>
+    <span class="s1">movies </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">movies_dict</span><span class="s2">)</span>
+    <span class="s1">similarity </span><span class="s2">= </span><span class="s1">pickle</span><span class="s2">.</span><span class="s1">load</span><span class="s2">(</span><span class="s1">open</span><span class="s2">(</span><span class="s3">'similarity.pkl'</span><span class="s2">, </span><span class="s3">'rb'</span><span class="s2">))</span>
+    <span class="s0">return </span><span class="s1">movies</span><span class="s2">, </span><span class="s1">similarity</span>
+
+
+<span class="s1">movies</span><span class="s2">, </span><span class="s1">similarity </span><span class="s2">= </span><span class="s1">load_data</span><span class="s2">()</span>
+
+
+<span class="s4"># ---------- FETCH POSTER WITH CACHING ----------</span>
+<span class="s2">@</span><span class="s1">st</span><span class="s2">.</span><span class="s1">cache_data</span><span class="s2">(</span><span class="s1">ttl</span><span class="s2">=</span><span class="s5">3600</span><span class="s2">)  </span><span class="s4"># Cache for 1 hour</span>
+<span class="s0">def </span><span class="s1">fetch_poster</span><span class="s2">(</span><span class="s1">movie_id</span><span class="s2">):</span>
+    <span class="s4"># Try multiple poster services if one fails</span>
+    <span class="s1">poster_urls </span><span class="s2">= [</span>
+        <span class="s3">f&quot;https://api.themoviedb.org/3/movie/</span><span class="s0">{</span><span class="s1">movie_id</span><span class="s0">}</span><span class="s3">?api_key=c433d4ef4a7ec2b5579165b8afb2b94c&amp;language=en-US&quot;</span><span class="s2">,</span>
+        <span class="s3">f&quot;https://api.themoviedb.org/3/movie/</span><span class="s0">{</span><span class="s1">movie_id</span><span class="s0">}</span><span class="s3">?api_key=8265bd1679663a7ea12ac168da84d2e8&amp;language=en-US&quot;</span>
+        <span class="s4"># Backup API key</span>
+    <span class="s2">]</span>
+
+    <span class="s1">headers </span><span class="s2">= {</span>
+        <span class="s3">&quot;User-Agent&quot;</span><span class="s2">: </span><span class="s3">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36&quot;</span>
+    <span class="s2">}</span>
+
+    <span class="s0">for </span><span class="s1">url </span><span class="s0">in </span><span class="s1">poster_urls</span><span class="s2">:</span>
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">response </span><span class="s2">= </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">url</span><span class="s2">, </span><span class="s1">headers</span><span class="s2">=</span><span class="s1">headers</span><span class="s2">, </span><span class="s1">timeout</span><span class="s2">=</span><span class="s5">5</span><span class="s2">)</span>
+
+            <span class="s0">if </span><span class="s1">response</span><span class="s2">.</span><span class="s1">status_code </span><span class="s2">== </span><span class="s5">200</span><span class="s2">:</span>
+                <span class="s1">data </span><span class="s2">= </span><span class="s1">response</span><span class="s2">.</span><span class="s1">json</span><span class="s2">()</span>
+                <span class="s1">poster_path </span><span class="s2">= </span><span class="s1">data</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s3">&quot;poster_path&quot;</span><span class="s2">)</span>
+
+                <span class="s0">if </span><span class="s1">poster_path</span><span class="s2">:</span>
+                    <span class="s0">return </span><span class="s3">&quot;https://image.tmdb.org/t/p/w500/&quot; </span><span class="s2">+ </span><span class="s1">poster_path</span>
+                <span class="s0">else</span><span class="s2">:</span>
+                    <span class="s4"># Return placeholder with movie title</span>
+                    <span class="s1">movie_title </span><span class="s2">= </span><span class="s1">movies</span><span class="s2">[</span><span class="s1">movies</span><span class="s2">[</span><span class="s3">'movie_id'</span><span class="s2">] == </span><span class="s1">movie_id</span><span class="s2">].</span><span class="s1">iloc</span><span class="s2">[</span><span class="s5">0</span><span class="s2">][</span><span class="s3">'title'</span><span class="s2">]</span>
+                    <span class="s0">return </span><span class="s3">f&quot;https://via.placeholder.com/500x750?text=</span><span class="s0">{</span><span class="s1">movie_title</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s3">' '</span><span class="s2">, </span><span class="s3">'+'</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span>
+
+            <span class="s0">elif </span><span class="s1">response</span><span class="s2">.</span><span class="s1">status_code </span><span class="s2">== </span><span class="s5">429</span><span class="s2">:  </span><span class="s4"># Rate limited</span>
+                <span class="s1">time</span><span class="s2">.</span><span class="s1">sleep</span><span class="s2">(</span><span class="s5">1</span><span class="s2">)  </span><span class="s4"># Wait and try next</span>
+                <span class="s0">continue</span>
+
+        <span class="s0">except</span><span class="s2">:</span>
+            <span class="s0">continue</span>
+
+    <span class="s4"># If all APIs fail, return placeholder</span>
+    <span class="s1">movie_title </span><span class="s2">= </span><span class="s1">movies</span><span class="s2">[</span><span class="s1">movies</span><span class="s2">[</span><span class="s3">'movie_id'</span><span class="s2">] == </span><span class="s1">movie_id</span><span class="s2">].</span><span class="s1">iloc</span><span class="s2">[</span><span class="s5">0</span><span class="s2">][</span><span class="s3">'title'</span><span class="s2">]</span>
+    <span class="s0">return </span><span class="s3">f&quot;https://via.placeholder.com/500x750?text=</span><span class="s0">{</span><span class="s1">movie_title</span><span class="s2">.</span><span class="s1">replace</span><span class="s2">(</span><span class="s3">' '</span><span class="s2">, </span><span class="s3">'+'</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span>
+
+
+<span class="s4"># ---------- RECOMMEND FUNCTION ----------</span>
+<span class="s0">def </span><span class="s1">recommend</span><span class="s2">(</span><span class="s1">movie</span><span class="s2">):</span>
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">movie_index </span><span class="s2">= </span><span class="s1">movies</span><span class="s2">[</span><span class="s1">movies</span><span class="s2">[</span><span class="s3">'title'</span><span class="s2">] == </span><span class="s1">movie</span><span class="s2">].</span><span class="s1">index</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+        <span class="s1">distances </span><span class="s2">= </span><span class="s1">similarity</span><span class="s2">[</span><span class="s1">movie_index</span><span class="s2">]</span>
+
+        <span class="s1">movies_list </span><span class="s2">= </span><span class="s1">sorted</span><span class="s2">(</span>
+            <span class="s1">list</span><span class="s2">(</span><span class="s1">enumerate</span><span class="s2">(</span><span class="s1">distances</span><span class="s2">)),</span>
+            <span class="s1">reverse</span><span class="s2">=</span><span class="s0">True</span><span class="s2">,</span>
+            <span class="s1">key</span><span class="s2">=</span><span class="s0">lambda </span><span class="s1">x</span><span class="s2">: </span><span class="s1">x</span><span class="s2">[</span><span class="s5">1</span><span class="s2">]</span>
+        <span class="s2">)[</span><span class="s5">1</span><span class="s2">:</span><span class="s5">6</span><span class="s2">]</span>
+
+        <span class="s1">recommended_movies </span><span class="s2">= []</span>
+        <span class="s1">recommended_posters </span><span class="s2">= []</span>
+
+        <span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">movies_list</span><span class="s2">:</span>
+            <span class="s1">movie_id </span><span class="s2">= </span><span class="s1">movies</span><span class="s2">.</span><span class="s1">iloc</span><span class="s2">[</span><span class="s1">i</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]].</span><span class="s1">movie_id</span>
+            <span class="s1">movie_title </span><span class="s2">= </span><span class="s1">movies</span><span class="s2">.</span><span class="s1">iloc</span><span class="s2">[</span><span class="s1">i</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]].</span><span class="s1">title</span>
+
+            <span class="s1">recommended_movies</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">movie_title</span><span class="s2">)</span>
+
+            <span class="s4"># Fetch poster with retry logic</span>
+            <span class="s1">poster </span><span class="s2">= </span><span class="s1">fetch_poster</span><span class="s2">(</span><span class="s1">movie_id</span><span class="s2">)</span>
+            <span class="s1">recommended_posters</span><span class="s2">.</span><span class="s1">append</span><span class="s2">(</span><span class="s1">poster</span><span class="s2">)</span>
+
+        <span class="s0">return </span><span class="s1">recommended_movies</span><span class="s2">, </span><span class="s1">recommended_posters</span>
+
+    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+        <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">f&quot;Error finding recommendations: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s2">[], []</span>
+
+
+<span class="s4"># ---------- HEADER ----------</span>
+<span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;&lt;div class='main-title'&gt;🎬 Movie Recommendation Engine&lt;/div&gt;&quot;</span><span class="s2">, </span><span class="s1">unsafe_allow_html</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+<span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;&lt;div class='subtitle'&gt;Find movies similar to your favorites&lt;/div&gt;&quot;</span><span class="s2">, </span><span class="s1">unsafe_allow_html</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+<span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;&lt;br&gt;&quot;</span><span class="s2">, </span><span class="s1">unsafe_allow_html</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+<span class="s4"># ---------- MOVIE SELECT ----------</span>
+<span class="s1">selected_movie_name </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">selectbox</span><span class="s2">(</span>
+    <span class="s3">&quot;🔎 Search for a movie&quot;</span><span class="s2">,</span>
+    <span class="s1">movies</span><span class="s2">[</span><span class="s3">'title'</span><span class="s2">].</span><span class="s1">values</span>
+<span class="s2">)</span>
+
+<span class="s4"># ---------- BUTTON ----------</span>
+<span class="s0">if </span><span class="s1">st</span><span class="s2">.</span><span class="s1">button</span><span class="s2">(</span><span class="s3">&quot;✨ Recommend&quot;</span><span class="s2">):</span>
+
+    <span class="s0">with </span><span class="s1">st</span><span class="s2">.</span><span class="s1">spinner</span><span class="s2">(</span><span class="s3">&quot;Finding the best movies for you...&quot;</span><span class="s2">):</span>
+        <span class="s1">names</span><span class="s2">, </span><span class="s1">posters </span><span class="s2">= </span><span class="s1">recommend</span><span class="s2">(</span><span class="s1">selected_movie_name</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">names</span><span class="s2">:  </span><span class="s4"># Only show if recommendations were found</span>
+        <span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;## 🍿 Recommended For You&quot;</span><span class="s2">)</span>
+
+        <span class="s1">cols </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">columns</span><span class="s2">(</span><span class="s5">5</span><span class="s2">)</span>
+
+        <span class="s0">for </span><span class="s1">i </span><span class="s0">in </span><span class="s1">range</span><span class="s2">(</span><span class="s1">len</span><span class="s2">(</span><span class="s1">names</span><span class="s2">)):</span>
+            <span class="s0">with </span><span class="s1">cols</span><span class="s2">[</span><span class="s1">i</span><span class="s2">]:</span>
+                <span class="s4"># Display poster first, then title below - FIXED ORDER</span>
+                <span class="s1">st</span><span class="s2">.</span><span class="s1">image</span><span class="s2">(</span><span class="s1">posters</span><span class="s2">[</span><span class="s1">i</span><span class="s2">], </span><span class="s1">use_container_width</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)  </span><span class="s4"># Fixed deprecation warning</span>
+                <span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">f&quot;&lt;div class='movie-card'&gt;&lt;b&gt;</span><span class="s0">{</span><span class="s1">names</span><span class="s2">[</span><span class="s1">i</span><span class="s2">]</span><span class="s0">}</span><span class="s3">&lt;/b&gt;&lt;/div&gt;&quot;</span><span class="s2">, </span><span class="s1">unsafe_allow_html</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+    <span class="s0">else</span><span class="s2">:</span>
+        <span class="s1">st</span><span class="s2">.</span><span class="s1">warning</span><span class="s2">(</span><span class="s3">&quot;No recommendations found. Please try another movie.&quot;</span><span class="s2">)</span>
+
+<span class="s4"># ---------- FOOTER ----------</span>
+<span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;&quot;&quot; 
+&lt;div class='footer'&gt; 
+Made with ❤️ using Streamlit 
+&lt;/div&gt; 
+&quot;&quot;&quot;</span><span class="s2">, </span><span class="s1">unsafe_allow_html</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span></pre>
+</body>
+</html>

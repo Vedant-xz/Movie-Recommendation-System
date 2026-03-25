@@ -1,0 +1,10 @@
+warning: current Git remote contains credentials
+warning: current Git remote contains credentials
+Uploading LFS objects: 100% (3/3), 189 MB | 0 B/s, done.
+remote: error: Trace: ffdfe7bd5af5b7045e4614b353c9372540dd3e3324ae69b3936627b452abfcf4        
+remote: error: See https://gh.io/lfs for more information.        
+remote: error: File similarity.pkl is 176.22 MB; this exceeds GitHub's file size limit of 100.00 MB        
+remote: error: GH001: Large files detected. You may want to try Git Large File Storage - https://git-lfs.github.com.        
+To https://github.com/Vedant-xz/Movie-Recommendation-System.git
+ ! [remote rejected] master -> master (pre-receive hook declined)
+error: failed to push some refs to 'https://github.com/Vedant-xz/Movie-Recommendation-System.git'
